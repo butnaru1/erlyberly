@@ -17,7 +17,11 @@
  */
 package erlyberly;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -385,7 +389,12 @@ public class ErlyBerly extends Application {
 
     private static void startEpmd() {
         try {
-            Process epmd = Runtime.getRuntime().exec("epmd -daemon");
+            Process epmd;
+            if (System.getProperty("os.name").contains("Windows")) {
+                epmd =Runtime.getRuntime().exec(getEPMDWindowsPath() + " -daemon");
+            } else {
+                epmd = Runtime.getRuntime().exec("epmd -daemon");
+            }
             int exitV = epmd.waitFor();
             if (exitV != 0) {
                 System.err.println(
@@ -394,5 +403,18 @@ public class ErlyBerly extends Application {
         } catch (Exception e) {
             System.err.println("Failed to start epmd: " + e);
         }
+    }
+
+    private static String getEPMDWindowsPath() {
+        File dir = new File("C:\\Program Files");
+
+        Optional<File> erlDir = Arrays.stream(Objects.requireNonNull(dir.listFiles())).filter(file -> file.getName().startsWith("erl")).findFirst();
+        if (erlDir.isPresent()) {
+            Optional<File> ertsDir = Arrays.stream(Objects.requireNonNull(erlDir.get().listFiles())).filter(file1 -> file1.getName().startsWith("erts")).findFirst();
+            if (ertsDir.isPresent()) {
+                return ertsDir.get().getAbsolutePath() + "\\bin\\epmd";
+            }
+        }
+        return "";
     }
 }
